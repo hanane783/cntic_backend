@@ -4,7 +4,8 @@
 
 from rest_framework.views import APIView
 from rest_framework.response import Response
-from rest_framework import status
+from rest_framework import status, permissions
+
 from .models import Account
 import random
 
@@ -74,4 +75,47 @@ class RegisterView(APIView):
                 "amount_to_pay": user.amount_to_pay
             },
             status=status.HTTP_201_CREATED
+      
+ 
         )
+
+class ProfileView(APIView):
+    permission_classes = [permissions.IsAuthenticated]
+
+    def _user_data(self, user):
+        return {
+            "id": user.id,
+            "username": user.username,
+            "email": user.email,
+            "type": user.type,
+            "is_paid": user.is_paid,          # للعرض فقط
+            "amount_to_pay": user.amount_to_pay  # للعرض فقط
+        }
+
+    # 🔹 View Profile
+    def get(self, request):
+        return Response(
+            self._user_data(request.user),
+            status=status.HTTP_200_OK
+        )
+
+    # 🔹 Update Profile
+    def put(self, request):
+        user = request.user
+        data = request.data
+
+        # تحديث الحقول المسموح بها فقط
+        if data.get("username"):
+            user.username = data["username"]
+
+        if data.get("email"):
+            user.email = data["email"]
+
+        user.save()
+
+        return Response(
+            self._user_data(user),
+            status=status.HTTP_200_OK
+        )
+
+
