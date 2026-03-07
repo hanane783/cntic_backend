@@ -9,7 +9,7 @@ class Account(AbstractUser):
 
     USER_TYPES = (
         ('student', 'Student'),
-        ('teacher', 'Teacher'),
+        ('others', 'others'),
     )
 
     type = models.CharField(max_length=20, choices=USER_TYPES)
@@ -23,7 +23,7 @@ class Account(AbstractUser):
 
     def save(self, *args, **kwargs):
         # تحديد المبلغ تلقائياً حسب نوع المستخدم
-        if self.type == 'teacher':
+        if self.type == 'others':
             self.amount_to_pay = 250
         elif self.type == 'student':
             self.amount_to_pay = 200

@@ -1,8 +1,10 @@
+
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status, permissions
 from django.core.mail import send_mail
 from django.conf import settings
+
 
 from .models import Account
 from decorators import verified_required, paid_required, verified_and_paid_required
@@ -26,7 +28,7 @@ class RegisterView(APIView):
         if Account.objects.filter(email=email).exists():
             return Response({"error": "Email already exists"}, status=status.HTTP_400_BAD_REQUEST)
 
-        if user_type not in ['student', 'teacher']:
+        if user_type not in ['student', 'others']:
             return Response({"error": "Invalid user type"}, status=status.HTTP_400_BAD_REQUEST)
 
         otp = random.randint(100000, 999999)
