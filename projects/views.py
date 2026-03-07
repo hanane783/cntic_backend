@@ -38,6 +38,3 @@ class VoteProjectView(APIView):
             status=status.HTTP_200_OK
         )
         from django.http import HttpResponse
-
-def home(request):
-    return HttpResponse("API is running 🚀")
