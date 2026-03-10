@@ -37,4 +37,4 @@ class VoteProjectView(APIView):
             },
             status=status.HTTP_200_OK
         )
-        from django.http import HttpResponse
+  

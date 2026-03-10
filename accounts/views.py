@@ -184,3 +184,61 @@ class ProfileView(APIView):
         user.save()
 
         return Response(self._user_data(user), status=status.HTTP_200_OK)
+from rest_framework.decorators import api_view, permission_classes
+from rest_framework.permissions import IsAdminUser
+from rest_framework.response import Response
+
+from projects.models import Project
+from django.db import models
+
+@api_view(['GET','POST'])
+@permission_classes([IsAdminUser])
+def admin_dashboard(request):
+
+    # --- إضافة مشروع جديد ---
+    if request.method == 'POST':
+        title = request.data.get('title')
+        description = request.data.get('description')
+        image = request.data.get('image')
+
+        if not all([title, description, image]):
+            return Response({"error":"All fields required"}, status=400)
+
+        # صاحب المشروع هو Admin نفسه
+        project = Project.objects.create(title=title, description=description, image=image, owner=request.user)
+        return Response({"message":"Project added","project_id":project.id}, status=201)
+
+    # --- أول 5 مستخدمين ---
+    users = Account.objects.all()[:5]
+    users_data = [{"id": u.id, "username": u.username, "email": u.email, "type": u.type, 
+                   "is_verified": u.is_verified, "is_paid": u.is_paid} for u in users]
+
+    # --- أول 5 مشاريع أو بحث حسب title ---
+    search_project = request.GET.get('project')
+    if search_project:
+        projects = Project.objects.filter(title__icontains=search_project)[:5]
+    else:
+        projects = Project.objects.all()[:5]
+
+    projects_data = [{"id": p.id, "title": p.title, "description": p.description, 
+                      "owner": p.owner.username, "votes_count": p.votes_count} for p in projects]
+
+    # --- أفضل 3 مشاريع ---
+    top_projects = Project.objects.order_by("-votes_count")[:3]
+    top_projects_data = [{"id": p.id, "title": p.title, "votes_count": p.votes_count} for p in top_projects]
+
+    # --- إحصائيات ---
+    total_users = Account.objects.count()
+    total_projects = Project.objects.count()
+    total_votes = Project.objects.aggregate(total_votes=models.Sum('votes_count'))['total_votes'] or 0
+
+    return Response({
+        "users": users_data,
+        "projects": projects_data,
+        "top_projects": top_projects_data,
+        "stats": {
+            "total_users": total_users,
+            "total_projects": total_projects,
+            "total_votes": total_votes
+        }
+    })
