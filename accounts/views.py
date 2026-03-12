@@ -4,12 +4,29 @@ from rest_framework.response import Response
 from rest_framework import status, permissions
 from django.core.mail import send_mail
 from django.conf import settings
-
-
+from django.contrib.auth.models import Group
+from drf_spectacular.utils import extend_schema, OpenApiExample
 from .models import Account
-from decorators import verified_required, paid_required, verified_and_paid_required
+from decorators import verified_required, paid_required, verified_and_paid_required,group_required
 import random
+from django.core.mail import EmailMultiAlternatives
+from django.template.loader import render_to_string
 
+
+
+@extend_schema(
+    request={
+        "application/json": {
+            "type": "object",
+            "properties": {
+                "username": {"type": "string"},
+                "email": {"type": "string"},
+                "password": {"type": "string"},
+                "type": {"type": "string"}
+            }
+        }
+    }
+)
 
 class RegisterView(APIView):
 
@@ -42,15 +59,12 @@ class RegisterView(APIView):
             is_paid=False
         )
         user.set_password(password)
+        
         user.save()
-
-        send_mail(
-            subject="Your CNTIC Verification Code",
-            message=f"Hello {username},\n\nYour OTP verification code is: {otp}\n\nThis code is required to activate your account.\n\nCNTIC Team",
-            from_email=settings.DEFAULT_FROM_EMAIL,
-            recipient_list=[email],
-            fail_silently=False,
-        )
+        group = Group.objects.get(name=user_type)
+        user.groups.add(group)
+       
+        send_otp_email(user, otp)
 
         return Response(
             {
@@ -60,6 +74,16 @@ class RegisterView(APIView):
             status=status.HTTP_201_CREATED
         )
 
+@extend_schema(
+request={
+    "application/json": {
+        "type": "object",
+        "properties": {
+            "email": {"type": "string"},
+            "otp": {"type": "integer"}
+        }
+    }
+})
 
 class VerifyOTPView(APIView):
 
@@ -93,6 +117,32 @@ class VerifyOTPView(APIView):
         return Response({"message": "Account verified successfully"}, status=status.HTTP_200_OK)
 
 
+def send_otp_email(user, otp):
+    subject = "Your CNTIC Verification Code"
+    from_email = settings.DEFAULT_FROM_EMAIL
+    to_email = [user.email]
+
+    html_content = render_to_string('email/otp_email.html', {
+        'username': user.username,
+        'otp_code': otp
+    })
+
+    msg = EmailMultiAlternatives(subject, '', from_email, to_email)
+    msg.attach_alternative(html_content, "text/html")
+    msg.send(fail_silently=False)
+
+
+
+@extend_schema(
+    request={
+        "application/json": {
+            "type": "object",
+            "properties": {
+                "email": {"type": "string"}
+            }
+        }
+    }
+)
 class ResendOTPView(APIView):
 
     def post(self, request):
@@ -113,16 +163,10 @@ class ResendOTPView(APIView):
         user.otp_code = otp
         user.save()
 
-        send_mail(
-            subject="Your CNTIC Verification Code",
-            message=f"Hello {user.username},\n\nYour new OTP verification code is: {otp}\n\nCNTIC Team",
-            from_email=settings.DEFAULT_FROM_EMAIL,
-            recipient_list=[email],
-            fail_silently=False,
-        )
+        # استدعاء دالة إرسال إيميل HTML
+        send_otp_email(user, otp)
 
-        return Response({"message": "OTP resent successfully"}, status=status.HTTP_200_OK)
-
+        return Response({"message": "OTP resent successfully"}, status=status.HTTP_200_OK)  
 
 class MarkAsPaidView(APIView):
     permission_classes = [permissions.IsAuthenticated]
@@ -153,7 +197,17 @@ class MarkAsPaidView(APIView):
             status=status.HTTP_200_OK
         )
 
-
+@extend_schema(
+request={
+    "application/json": {
+        "type": "object",
+        "properties": {
+            "username": {"type": "string"},
+            "email": {"type": "string"}
+        }
+    }
+}
+)
 class ProfileView(APIView):
     permission_classes = [permissions.IsAuthenticated]
 
@@ -184,61 +238,23 @@ class ProfileView(APIView):
         user.save()
 
         return Response(self._user_data(user), status=status.HTTP_200_OK)
-from rest_framework.decorators import api_view, permission_classes
-from rest_framework.permissions import IsAdminUser
-from rest_framework.response import Response
-
+from rest_framework.decorators import api_view
 from projects.models import Project
 from django.db import models
 
-@api_view(['GET','POST'])
-@permission_classes([IsAdminUser])
-def admin_dashboard(request):
 
-    # --- إضافة مشروع جديد ---
-    if request.method == 'POST':
-        title = request.data.get('title')
-        description = request.data.get('description')
-        image = request.data.get('image')
-
-        if not all([title, description, image]):
-            return Response({"error":"All fields required"}, status=400)
-
-        # صاحب المشروع هو Admin نفسه
-        project = Project.objects.create(title=title, description=description, image=image, owner=request.user)
-        return Response({"message":"Project added","project_id":project.id}, status=201)
-
-    # --- أول 5 مستخدمين ---
-    users = Account.objects.all()[:5]
-    users_data = [{"id": u.id, "username": u.username, "email": u.email, "type": u.type, 
-                   "is_verified": u.is_verified, "is_paid": u.is_paid} for u in users]
-
-    # --- أول 5 مشاريع أو بحث حسب title ---
-    search_project = request.GET.get('project')
-    if search_project:
-        projects = Project.objects.filter(title__icontains=search_project)[:5]
-    else:
-        projects = Project.objects.all()[:5]
-
-    projects_data = [{"id": p.id, "title": p.title, "description": p.description, 
-                      "owner": p.owner.username, "votes_count": p.votes_count} for p in projects]
-
-    # --- أفضل 3 مشاريع ---
-    top_projects = Project.objects.order_by("-votes_count")[:3]
-    top_projects_data = [{"id": p.id, "title": p.title, "votes_count": p.votes_count} for p in top_projects]
-
-    # --- إحصائيات ---
-    total_users = Account.objects.count()
-    total_projects = Project.objects.count()
-    total_votes = Project.objects.aggregate(total_votes=models.Sum('votes_count'))['total_votes'] or 0
-
-    return Response({
-        "users": users_data,
-        "projects": projects_data,
-        "top_projects": top_projects_data,
-        "stats": {
-            "total_users": total_users,
-            "total_projects": total_projects,
-            "total_votes": total_votes
-        }
-    })
+@extend_schema(
+    description="Get paginated list of users (Admin only)",
+    responses={200: "Paginated list of users"}
+)
+@api_view(['GET'])
+@group_required('Admin')
+def users_list(request):
+    users = Account.objects.all()
+    paginator = StandardResultsSetPagination()
+    result_page = paginator.paginate_queryset(users, request)
+    users_data = [
+        {"id": u.id, "username": u.username, "email": u.email, "type": u.type,
+         "is_verified": u.is_verified, "is_paid": u.is_paid} for u in result_page
+    ]
+    return paginator.get_paginated_response(users_data)

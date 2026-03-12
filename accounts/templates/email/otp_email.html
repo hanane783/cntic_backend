@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OTP Verification</title>
+    <style>
+        body {
+            font-family: 'Arial', sans-serif;
+            background-color: #f4f4f8;
+            margin: 0;
+            padding: 0;
+        }
+
+        .email-container {
+            max-width: 600px;
+            margin: 40px auto;
+            background-color: #ffffff;
+            border-radius: 12px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+            overflow: hidden;
+            padding: 0;
+        }
+
+        .header {
+            background-color: #2E86DE;
+            color: #ffffff;
+            text-align: center;
+            padding: 20px 0;
+            font-size: 24px;
+            font-weight: bold;
+        }
+
+        .content {
+            padding: 30px 20px;
+            text-align: center;
+        }
+
+        .greeting {
+            font-size: 18px;
+            margin-bottom: 20px;
+        }
+
+        .otp-card {
+            display: inline-block;
+            background-color: #f1f5fb;
+            border: 2px dashed #2E86DE;
+            border-radius: 10px;
+            padding: 15px 25px;
+            font-size: 36px;
+            font-weight: bold;
+            color: #E74C3C;
+            letter-spacing: 6px;
+            margin-bottom: 20px;
+        }
+
+        .note {
+            font-size: 14px;
+            color: #555555;
+        }
+
+        .footer {
+            font-size: 12px;
+            color: #999999;
+            text-align: center;
+            padding: 15px 0;
+            border-top: 1px solid #eaeaea;
+        }
+
+        @media screen and (max-width: 480px) {
+            .otp-card {
+                font-size: 28px;
+                letter-spacing: 4px;
+                padding: 12px 18px;
+            }
+
+            .header {
+                font-size: 20px;
+            }
+
+            .greeting {
+                font-size: 16px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="email-container">
+        <div class="header">CNTIC Verification</div>
+        <div class="content">
+            <div class="greeting">Hello {{ username }} 👋</div>
+            <div class="otp-card">{{ otp_code }}</div>
+            <div class="note">
+                Use this OTP code to verify your account. <br>
+                This code is valid for 10 minutes. Do not share it with anyone.
+            </div>
+        </div>
+        <div class="footer">
+            &copy; 2026 CNTIC Team. All rights reserved.
+        </div>
+    </div>
+</body>
+</html>

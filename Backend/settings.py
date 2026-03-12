@@ -22,6 +22,7 @@ INSTALLED_APPS = [
     'corsheaders',
     'accounts',
     'projects',
+    'drf_spectacular',
 ]
 
 AUTH_USER_MODEL = 'accounts.Account'
@@ -60,6 +61,7 @@ REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': (
         'rest_framework_simplejwt.authentication.JWTAuthentication',
     ),
+    'DEFAULT_SCHEMA_CLASS': 'drf_spectacular.openapi.AutoSchema',
 }
 
 SIMPLE_JWT = {
@@ -127,6 +129,12 @@ EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
 EMAIL_HOST = 'smtp.gmail.com'
 EMAIL_PORT = 587
 EMAIL_USE_TLS = True
-EMAIL_HOST_USER = 'your_email@gmail.com'
-EMAIL_HOST_PASSWORD = 'your_app_password'
-DEFAULT_FROM_EMAIL = 'CNTIC <your_email@gmail.com>'
+EMAIL_HOST_USER = 'hanane.mesai.g5.2004@gmail.com'
+EMAIL_HOST_PASSWORD = 'ijzi lvmp vhgb mrjd'
+DEFAULT_FROM_EMAIL = 'CNTIC <hanane.mesai.g5.2004@gmail.com>'
+
+SPECTACULAR_SETTINGS = {
+'TITLE': 'EVENT API',
+'DESCRIPTION': 'API documentation for EVENT platform',
+'VERSION': '1.0.0',
+}
